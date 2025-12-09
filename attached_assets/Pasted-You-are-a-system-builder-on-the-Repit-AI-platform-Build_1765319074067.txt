@@ -1,0 +1,270 @@
+You are a system builder on the Repit.AI platform. Build a multi-user web application for accounting-related inventory tracking of imported shipments. The app must include a database with full CRUD, a clean multi-step workflow, and role-based access control.
+
+GOAL
+I want an Accounting & Inventory system to manage imported shipments, their contents, importing details, and customs costs. It must be multi-user with authentication, database-backed, and provide full CRUD for all main entities.
+
+TECH OVERVIEW (let Repit.AI choose defaults)
+- Use a standard web app stack supported by Repit.AI (backend + database + frontend).
+- Implement all database models, REST-style APIs (or the platform's equivalent), and UI screens.
+- Support pagination, validation, and a responsive UI.
+
+USER & AUTH
+- Implement user authentication (login, logout, password hashing).
+- Define roles and permissions:
+  - Admin:
+    - Full CRUD on all entities.
+    - Can change shipment customs status.
+    - Can manage users.
+  - Operator (Data Entry):
+    - Can create and update shipments and shipment items.
+    - Can edit Importing Details.
+    - Can view Customs data but cannot change customs status.
+  - Viewer:
+    - Read-only access to shipments, items, importing details, and customs.
+
+CORE ENTITIES (DATABASE MODELS)
+
+1) User
+- id (PK)
+- name
+- email (unique)
+- password_hash
+- role (enum: ADMIN, OPERATOR, VIEWER)
+- timestamps
+
+2) Supplier
+- id (PK)
+- name
+- contact_info (optional)
+- default_country (optional)
+- timestamps
+
+3) ItemType
+- id (PK)
+- name (e.g. "Shoes", "Electronics")
+- description (optional)
+- timestamps
+
+4) Shipment
+- id (PK)
+- shipment_name (string)
+- shipment_number (string)  // human-readable shipment identifier
+- backend_master_key (string, unique) // internal unique key
+- status (enum: CREATED, IMPORTING_DETAILS_DONE, CUSTOMS_IN_PROGRESS, CUSTOMS_RECEIVED)
+- created_by (FK to User)
+- updated_by (FK to User)
+- timestamps
+
+5) ShipmentItem
+- id (PK)
+- shipment_id (FK to Shipment, required)
+- item_photo_url (string, optional)
+- supplier_id (FK to Supplier, required)
+- item_type_id (FK to ItemType, required)
+- ctn (integer, "CTN" – how many packages/cartons in shipment for this item)
+- pcs_per_ctn (integer, "PCS" – how many items in each carton)
+- cou (integer, "COU" – total pieces, auto-calculated as ctn * pcs_per_ctn)
+- pri (decimal(18,2), "PRI" – price per piece)
+- total (decimal(18,2), "Total" – auto-calculated as cou * pri)
+- timestamps
+
+Business rules for ShipmentItem:
+- When user inputs CTN, PCS, and PRI:
+  - cou = ctn * pcs_per_ctn
+  - total = cou * pri
+- If cou or total is edited directly (if allowed), recalculate dependent fields or prevent direct edits (choose one approach and keep it consistent).
+- Validate that CTN, PCS, COU are non-negative integers and PRI, Total are non-negative decimals.
+
+6) ImportingDetails
+- id (PK)
+- shipment_id (FK to Shipment, unique: 1-to-1 with Shipment)
+- total_shipment_price (decimal(18,2)) // auto-filled from sum of ShipmentItem.total
+- commission_percent (decimal(5,2))   // e.g. 5.00 = 5%
+- commission_amount (decimal(18,2))   // total_shipment_price * commission_percent/100
+- shipment_cost (decimal(18,2))       // manually entered (e.g. freight, handling, etc.)
+- shipment_space_m2 (decimal(18,3))   // "Shipment Space by meter square"
+- timestamps
+
+Business rules for ImportingDetails:
+- On opening/importing step:
+  - Automatically calculate total_shipment_price as SUM of ShipmentItem.total for that shipment.
+- When commission_percent is entered or changed:
+  - commission_amount = total_shipment_price * commission_percent / 100.
+- Validate that all monetary fields are decimals with 2 digits and non-negative.
+
+7) Customs
+This is a record that exists only when customs status is RECEIVED.
+
+- id (PK)
+- shipment_id (FK to Shipment, unique: 1-to-1 with Shipment)
+- bill_date (date) // "Bill Data" – receiving date
+- total_pieces_recorded (integer) // initial total pieces, imported from shipment items
+- total_pieces_adjusted (integer) // editable value if there is loss or damage
+- loss_or_damage_pieces (integer, derived: total_pieces_recorded - total_pieces_adjusted)
+- timestamps
+
+The following should be represented as per-item-type breakdowns in a separate table:
+
+8) CustomsPerType
+- id (PK)
+- customs_id (FK to Customs)
+- item_type_id (FK to ItemType)
+- total_pcs_per_type (integer)
+- total_ctn_per_type (integer)
+- paid_customs (decimal(18,2)) // "Paid Customs per type"
+- takhreg (decimal(18,2))     // "Takhreg per type"
+- timestamps
+
+Business rules for Customs and CustomsPerType:
+- When a shipment is marked as CUSTOMS_RECEIVED:
+  - Create a Customs record for that shipment.
+  - Set total_pieces_recorded as the sum of COU across all shipment items.
+  - Default total_pieces_adjusted = total_pieces_recorded.
+- Allow editing total_pieces_adjusted to account for loss/damage.
+- Automatically maintain loss_or_damage_pieces = total_pieces_recorded - total_pieces_adjusted.
+- For each ItemType present in ShipmentItems for that shipment:
+  - Allow creation/editing of CustomsPerType records with:
+    - total_pcs_per_type and total_ctn_per_type (numbers for that type).
+    - Manual entry of paid_customs and takhreg.
+- Provide aggregated totals at the Customs level:
+  - total_paid_customs = SUM(CustomsPerType.paid_customs)
+  - total_paid_takhreg = SUM(CustomsPerType.takhreg)
+
+WORKFLOW / UI SCREENS
+
+A) Login & User Management
+- Login page with email + password.
+- Admin-only page:
+  - List users, create user (name, email, role), reset password, deactivate/reactivate user.
+
+B) Shipments List Screen
+- Table listing shipments with:
+  - Shipment Name
+  - Shipment Number
+  - Backend Master Key
+  - Status (CREATED / IMPORTING_DETAILS_DONE / CUSTOMS_IN_PROGRESS / CUSTOMS_RECEIVED)
+  - Created Date
+  - Total shipment price (if available)
+- Filters:
+  - By status, supplier, date range.
+- Actions:
+  - View
+  - Edit
+  - Delete (Admin only)
+  - "Open Shipment Items"
+  - "Importing Details"
+  - "Customs" (only enabled when customs status = CUSTOMS_RECEIVED)
+- Support pagination and search.
+
+C) Create/Edit Shipment Screen
+- Fields:
+  - Shipment Name
+  - Shipment Number
+  - Backend Master Key (auto-generated unique, but editable by Admin)
+- Ability to save and then go to the "Shipment Items" step.
+
+D) Shipment Items Screen (for a selected shipment)
+- Grid/table view for up to 100 items per page (support pagination).
+- Columns:
+  - Item Photo (file upload or URL)
+  - Supplier (dropdown from Supplier table, with quick-add option)
+  - Item Type (dropdown from ItemType table, with quick-add option)
+  - CTN (integer)
+  - PCS (integer, pieces per CTN)
+  - COU (read-only, auto: CTN * PCS)
+  - PRI (price per piece, decimal)
+  - Total (read-only, auto: COU * PRI)
+- At bottom of the table, show running totals:
+  - Total CTN = SUM(CTN)
+  - Total PCS = SUM(COU)
+  - Total Price = SUM(Total)
+- Actions:
+  - Add new row
+  - Delete row
+  - Save / Update
+  - When saved, automatically update a stored "total_shipment_price" hint on Shipment or ImportingDetails.
+  - Button: "Next: Importing Details" to go to the next step.
+
+E) Importing Details Screen (for a selected shipment)
+- Only accessible if shipment exists.
+- Fields:
+  - Total Shipment Price (read-only, fetched as sum of ShipmentItem.total)
+  - Commission Percent (input, e.g. 5 for 5%)
+  - Commission Amount (read-only, calculated)
+  - Shipment Cost (input)
+  - Shipment Space (m²) (input)
+- Behavior:
+  - On load, calculate and show total_shipment_price from items.
+  - On change of commission_percent, update commission_amount.
+- Actions:
+  - Save/Update ImportingDetails.
+  - Set shipment.status to IMPORTING_DETAILS_DONE once saved.
+  - Button: "Mark Customs In Progress" (Admin/Operator) to set status CUSTOMS_IN_PROGRESS.
+
+F) Customs Status & Customs Screen
+- Customs is tied to the Shipment’s status:
+  - While status is CUSTOMS_IN_PROGRESS:
+    - Customs details screen is not accessible (show a message like "Customs is in progress and details will be available once shipment is received").
+  - When an Admin changes status to CUSTOMS_RECEIVED:
+    - Automatically create a Customs record if it does not exist.
+    - Set total_pieces_recorded from existing ShipmentItems.
+    - Default total_pieces_adjusted = total_pieces_recorded.
+- Customs Details Screen (only when status = CUSTOMS_RECEIVED):
+  - Header Fields:
+    - Shipment Name + Number + Backend Master Key
+    - Bill Date (date picker)
+    - Total Pieces Recorded (read-only)
+    - Total Pieces Adjusted (editable)
+    - Loss/Damage Pieces (read-only = Recorded - Adjusted)
+  - Type Breakdown Table (CustomsPerType):
+    - Columns:
+      - Item Type
+      - Total PCS per Type
+      - Total CTN per Type
+      - Paid Customs per Type
+      - Takhreg per Type
+  - At bottom, show:
+    - Total Paid Customs = SUM(Paid Customs per Type)
+    - Total Paid Takhreg = SUM(Takhreg per Type)
+  - Allow saving updates.
+
+GENERAL CRUD REQUIREMENTS
+- Provide full CRUD operations for:
+  - Shipments
+  - Shipment Items
+  - Suppliers
+  - ItemTypes
+  - ImportingDetails
+  - Customs & CustomsPerType
+- Use soft deletes where appropriate or protect deletes that would break relations (e.g. cannot delete a Shipment that has Customs received).
+
+VALIDATION & UX
+- All numeric fields (CTN, PCS, COU, totals, prices) must be validated as non-negative numbers.
+- Show clear error messages for invalid input.
+- Automatically calculate COU and monetary totals to minimize human error.
+- Confirmation prompts for destructive actions like delete.
+
+REPORTING / SUMMARY VIEWS (FIRST VERSION, SIMPLE)
+- A basic "Shipments Summary" screen:
+  - List all shipments with:
+    - Shipment Name/Number
+    - Total CTN
+    - Total PCS
+    - Total Shipment Price
+    - Status
+- A basic "Customs Summary" view:
+  - For each shipment with customs:
+    - Bill Date
+    - Shipment Name/Number
+    - Total Pieces Adjusted
+    - Total Paid Customs
+    - Total Paid Takhreg
+
+IMPLEMENT EVERYTHING ABOVE AS A COHESIVE, NAVIGABLE APP:
+- Main navigation with:
+  - Dashboard (optional summary)
+  - Shipments
+  - Suppliers
+  - Item Types
+  - Users (Admin only)
+- Ensure all relationships and auto-calculations work as described.

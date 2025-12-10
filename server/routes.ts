@@ -368,6 +368,62 @@ export async function registerRoutes(
     }
   });
 
+  app.put("/api/shipments/:shipmentId/items", isAuthenticated, requireEditor, async (req, res) => {
+    try {
+      const shipmentId = parseInt(req.params.shipmentId);
+      const { items } = req.body;
+      
+      if (!Array.isArray(items)) {
+        return res.status(400).json({ message: "Items must be an array" });
+      }
+
+      const existingItems = await storage.getShipmentItems(shipmentId);
+      const existingIds = new Set(existingItems.map(item => item.id));
+      const incomingIds = new Set(items.filter((item: any) => item.id).map((item: any) => item.id));
+
+      for (const existingItem of existingItems) {
+        if (!incomingIds.has(existingItem.id)) {
+          await storage.deleteShipmentItem(existingItem.id);
+        }
+      }
+
+      const results = [];
+      for (const item of items) {
+        if (item.id && existingIds.has(item.id)) {
+          const updated = await storage.updateShipmentItem(item.id, {
+            supplierId: item.supplierId,
+            itemTypeId: item.itemTypeId,
+            itemPhotoUrl: item.itemPhotoUrl,
+            ctn: item.ctn,
+            pcsPerCtn: item.pcsPerCtn,
+            cou: item.cou,
+            pri: item.pri,
+            total: item.total,
+          });
+          if (updated) results.push(updated);
+        } else {
+          const created = await storage.createShipmentItem({
+            shipmentId,
+            supplierId: item.supplierId,
+            itemTypeId: item.itemTypeId,
+            itemPhotoUrl: item.itemPhotoUrl,
+            ctn: item.ctn,
+            pcsPerCtn: item.pcsPerCtn,
+            cou: item.cou,
+            pri: item.pri,
+            total: item.total,
+          });
+          results.push(created);
+        }
+      }
+
+      res.json(results);
+    } catch (error) {
+      console.error("Error bulk updating shipment items:", error);
+      res.status(500).json({ message: "Failed to update items" });
+    }
+  });
+
   // Importing Details routes
   app.get("/api/shipments/:shipmentId/importing", isAuthenticated, async (req, res) => {
     try {
@@ -380,7 +436,36 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/shipments/:shipmentId/importing-details", isAuthenticated, async (req, res) => {
+    try {
+      const shipmentId = parseInt(req.params.shipmentId);
+      const details = await storage.getImportingDetails(shipmentId);
+      res.json(details || null);
+    } catch (error) {
+      console.error("Error fetching importing details:", error);
+      res.status(500).json({ message: "Failed to fetch importing details" });
+    }
+  });
+
   app.post("/api/shipments/:shipmentId/importing", isAuthenticated, requireEditor, async (req, res) => {
+    try {
+      const shipmentId = parseInt(req.params.shipmentId);
+      const parsed = insertImportingDetailsSchema.safeParse({
+        ...req.body,
+        shipmentId,
+      });
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid data", errors: parsed.error.errors });
+      }
+      const details = await storage.upsertImportingDetails(parsed.data);
+      res.json(details);
+    } catch (error) {
+      console.error("Error saving importing details:", error);
+      res.status(500).json({ message: "Failed to save importing details" });
+    }
+  });
+
+  app.put("/api/shipments/:shipmentId/importing-details", isAuthenticated, requireEditor, async (req, res) => {
     try {
       const shipmentId = parseInt(req.params.shipmentId);
       const parsed = insertImportingDetailsSchema.safeParse({

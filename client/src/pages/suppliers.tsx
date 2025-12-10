@@ -34,11 +34,12 @@ import {
 import { Plus, MoreHorizontal, Edit, Trash2, Building2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "@/lib/i18n";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Supplier } from "@shared/schema";
 
 const formSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1, "الاسم مطلوب"),
   contactInfo: z.string().optional(),
   defaultCountry: z.string().optional(),
 });
@@ -48,6 +49,7 @@ type FormData = z.infer<typeof formSchema>;
 export default function SuppliersPage() {
   const { toast } = useToast();
   const { canEdit } = useAuth();
+  const { t } = useTranslation();
   const [editSupplier, setEditSupplier] = useState<Supplier | null>(null);
   const [deleteSupplier, setDeleteSupplier] = useState<Supplier | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -84,13 +86,13 @@ export default function SuppliersPage() {
       return await apiRequest("POST", "/api/suppliers", data);
     },
     onSuccess: () => {
-      toast({ title: editSupplier ? "Supplier updated" : "Supplier created" });
+      toast({ title: editSupplier ? "تم تحديث المورد" : "تم إنشاء المورد" });
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
       setIsDialogOpen(false);
       setEditSupplier(null);
     },
     onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: t.common.error, description: error.message, variant: "destructive" });
     },
   });
 
@@ -99,22 +101,22 @@ export default function SuppliersPage() {
       await apiRequest("DELETE", `/api/suppliers/${id}`);
     },
     onSuccess: () => {
-      toast({ title: "Supplier deleted" });
+      toast({ title: "تم حذف المورد" });
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
       setDeleteSupplier(null);
     },
     onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: t.common.error, description: error.message, variant: "destructive" });
     },
   });
 
   const columns = [
-    { header: "Name", accessor: "name" as const },
-    { header: "Contact Info", accessor: "contactInfo" as const },
-    { header: "Default Country", accessor: "defaultCountry" as const },
+    { header: t.common.name, accessor: "name" as const },
+    { header: t.suppliers.contactInfo, accessor: "contactInfo" as const },
+    { header: t.suppliers.defaultCountry, accessor: "defaultCountry" as const },
     {
-      header: "Created",
-      accessor: (row: Supplier) => row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "-",
+      header: t.shipments.createdAt,
+      accessor: (row: Supplier) => row.createdAt ? new Date(row.createdAt).toLocaleDateString("ar-SA") : "-",
     },
     {
       header: "",
@@ -128,15 +130,15 @@ export default function SuppliersPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => openDialog(row)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
+                <Edit className="h-4 w-4" />
+                {t.common.edit}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setDeleteSupplier(row)}
                 className="text-destructive focus:text-destructive"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
+                <Trash2 className="h-4 w-4" />
+                {t.common.delete}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -145,89 +147,93 @@ export default function SuppliersPage() {
     },
   ];
 
+  const renderDialog = () => (
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{editSupplier ? t.suppliers.editSupplier : t.suppliers.newSupplier}</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit((data) => saveMutation.mutate(data))} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t.common.name}</FormLabel>
+                  <FormControl>
+                    <Input {...field} data-testid="input-supplier-name" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="contactInfo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t.suppliers.contactInfo}</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} data-testid="input-supplier-contact" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="defaultCountry"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t.suppliers.defaultCountry}</FormLabel>
+                  <FormControl>
+                    <Input {...field} data-testid="input-supplier-country" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                {t.common.cancel}
+              </Button>
+              <Button type="submit" disabled={saveMutation.isPending} data-testid="button-save-supplier">
+                {saveMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                {editSupplier ? t.common.save : t.common.create}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+
   if (!isLoading && (!suppliers || suppliers.length === 0)) {
     return (
-      <div className="space-y-8">
-        <PageHeader title="Suppliers" description="Manage your supplier contacts" />
+      <div className="space-y-8 p-6">
+        <PageHeader title={t.suppliers.title} description="إدارة جهات الاتصال الخاصة بالموردين" />
         <EmptyState
           icon={Building2}
-          title="No suppliers yet"
-          description="Add suppliers to associate with your shipment items."
-          action={canEdit ? { label: "Add Supplier", onClick: () => openDialog() } : undefined}
+          title={t.suppliers.noSuppliers}
+          description="أضف الموردين لربطهم بعناصر الشحنات الخاصة بك."
+          action={canEdit ? { label: t.suppliers.addSupplier, onClick: () => openDialog() } : undefined}
         />
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editSupplier ? "Edit Supplier" : "Add Supplier"}</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit((data) => saveMutation.mutate(data))} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} data-testid="input-supplier-name" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="contactInfo"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Info</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} data-testid="input-supplier-contact" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="defaultCountry"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Default Country</FormLabel>
-                      <FormControl>
-                        <Input {...field} data-testid="input-supplier-country" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={saveMutation.isPending} data-testid="button-save-supplier">
-                    {saveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {editSupplier ? "Save Changes" : "Create"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        {renderDialog()}
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <PageHeader
-        title="Suppliers"
-        description="Manage your supplier contacts"
+        title={t.suppliers.title}
+        description="إدارة جهات الاتصال الخاصة بالموردين"
         actions={
           canEdit && (
             <Button onClick={() => openDialog()} data-testid="button-add-supplier">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Supplier
+              <Plus className="h-4 w-4" />
+              {t.suppliers.addSupplier}
             </Button>
           )
         }
@@ -238,75 +244,17 @@ export default function SuppliersPage() {
         data={suppliers || []}
         isLoading={isLoading}
         rowKey={(row) => row.id}
-        emptyMessage="No suppliers found"
+        emptyMessage="لم يتم العثور على موردين"
       />
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editSupplier ? "Edit Supplier" : "Add Supplier"}</DialogTitle>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit((data) => saveMutation.mutate(data))} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} data-testid="input-supplier-name" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="contactInfo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contact Info</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} data-testid="input-supplier-contact" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="defaultCountry"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Default Country</FormLabel>
-                    <FormControl>
-                      <Input {...field} data-testid="input-supplier-country" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={saveMutation.isPending} data-testid="button-save-supplier">
-                  {saveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {editSupplier ? "Save Changes" : "Create"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      {renderDialog()}
 
       <ConfirmDialog
         open={!!deleteSupplier}
         onOpenChange={(open) => !open && setDeleteSupplier(null)}
-        title="Delete Supplier"
-        description={`Are you sure you want to delete "${deleteSupplier?.name}"? This cannot be undone.`}
-        confirmLabel="Delete"
+        title={t.suppliers.deleteSupplier}
+        description={`هل أنت متأكد من حذف "${deleteSupplier?.name}"؟ لا يمكن التراجع عن هذا الإجراء.`}
+        confirmLabel={t.common.delete}
         onConfirm={() => deleteSupplier && deleteMutation.mutate(deleteSupplier.id)}
         variant="destructive"
         isLoading={deleteMutation.isPending}

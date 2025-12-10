@@ -7,45 +7,47 @@ import { Ship, Package, FileText, Shield, BarChart3, Users, Loader2 } from "luci
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-
-const features = [
-  {
-    icon: Ship,
-    title: "Shipment Tracking",
-    description: "Track imported shipments from creation through customs clearance",
-  },
-  {
-    icon: Package,
-    title: "Inventory Management",
-    description: "Manage shipment items with automatic quantity and price calculations",
-  },
-  {
-    icon: FileText,
-    title: "Import Documentation",
-    description: "Record importing details including commissions and shipping costs",
-  },
-  {
-    icon: Shield,
-    title: "Customs Management",
-    description: "Track customs status, fees, and per-item type breakdowns",
-  },
-  {
-    icon: BarChart3,
-    title: "Comprehensive Reports",
-    description: "View summaries of shipments, costs, and customs data",
-  },
-  {
-    icon: Users,
-    title: "Role-Based Access",
-    description: "Admin, Operator, and Viewer roles with appropriate permissions",
-  },
-];
+import { useTranslation } from "@/lib/i18n";
 
 export default function Landing() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
+
+  const features = [
+    {
+      icon: Ship,
+      title: "تتبع الشحنات",
+      description: "تتبع الشحنات المستوردة من الإنشاء حتى التخليص الجمركي",
+    },
+    {
+      icon: Package,
+      title: "إدارة المخزون",
+      description: "إدارة عناصر الشحنات مع حساب الكميات والأسعار تلقائياً",
+    },
+    {
+      icon: FileText,
+      title: "توثيق الاستيراد",
+      description: "تسجيل تفاصيل الاستيراد بما في ذلك العمولات وتكاليف الشحن",
+    },
+    {
+      icon: Shield,
+      title: "إدارة الجمارك",
+      description: "تتبع حالة الجمارك والرسوم وتفاصيل كل نوع من العناصر",
+    },
+    {
+      icon: BarChart3,
+      title: "تقارير شاملة",
+      description: "عرض ملخصات الشحنات والتكاليف وبيانات الجمارك",
+    },
+    {
+      icon: Users,
+      title: "صلاحيات المستخدمين",
+      description: "أدوار المسؤول والمشغل والمشاهد مع الصلاحيات المناسبة",
+    },
+  ];
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,8 +58,8 @@ export default function Landing() {
       window.location.href = "/";
     } catch (error: any) {
       toast({
-        title: "Login Failed",
-        description: error.message || "Invalid username or password",
+        title: "فشل تسجيل الدخول",
+        description: error.message || "اسم المستخدم أو كلمة المرور غير صحيحة",
         variant: "destructive",
       });
     } finally {
@@ -73,7 +75,7 @@ export default function Landing() {
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary">
               <Ship className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-semibold">ShipTrack</span>
+            <span className="text-xl font-semibold">نظام الشحنات</span>
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
@@ -85,31 +87,31 @@ export default function Landing() {
         <section className="py-20 md:py-32">
           <div className="container mx-auto px-4">
             <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
-              <div className="text-center lg:text-left">
+              <div className="text-center lg:text-right">
                 <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-                  Accounting & Inventory
+                  نظام المحاسبة
                   <br />
-                  <span className="text-primary">Tracking System</span>
+                  <span className="text-primary">وتتبع المخزون</span>
                 </h1>
                 <p className="mt-6 max-w-2xl text-lg text-muted-foreground">
-                  Manage your imported shipments, track inventory, handle customs documentation,
-                  and streamline your accounting workflow with our comprehensive multi-user platform.
+                  إدارة شحناتك المستوردة، تتبع المخزون، معالجة مستندات الجمارك،
+                  وتبسيط سير العمل المحاسبي باستخدام منصتنا الشاملة متعددة المستخدمين.
                 </p>
               </div>
               
-              <Card className="w-full max-w-md mx-auto lg:mx-0 lg:ml-auto">
+              <Card className="w-full max-w-md mx-auto lg:mx-0">
                 <CardHeader>
-                  <CardTitle>Sign In</CardTitle>
-                  <CardDescription>Enter your credentials to access the system</CardDescription>
+                  <CardTitle>{t.auth.signIn}</CardTitle>
+                  <CardDescription>أدخل بيانات الاعتماد للوصول إلى النظام</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="username">Username</Label>
+                      <Label htmlFor="username">اسم المستخدم</Label>
                       <Input
                         id="username"
                         type="text"
-                        placeholder="Enter username"
+                        placeholder="أدخل اسم المستخدم"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         required
@@ -117,11 +119,11 @@ export default function Landing() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="password">Password</Label>
+                      <Label htmlFor="password">كلمة المرور</Label>
                       <Input
                         id="password"
                         type="password"
-                        placeholder="Enter password"
+                        placeholder="أدخل كلمة المرور"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
@@ -136,11 +138,11 @@ export default function Landing() {
                     >
                       {isLoading ? (
                         <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Signing in...
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          جاري تسجيل الدخول...
                         </>
                       ) : (
-                        "Sign In"
+                        t.auth.signIn
                       )}
                     </Button>
                   </form>
@@ -153,7 +155,7 @@ export default function Landing() {
         <section className="py-16 bg-muted/50">
           <div className="container mx-auto px-4">
             <h2 className="text-center text-2xl font-semibold mb-12">
-              Everything you need to manage shipments
+              كل ما تحتاجه لإدارة الشحنات
             </h2>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {features.map((feature) => (
@@ -174,7 +176,7 @@ export default function Landing() {
 
       <footer className="border-t py-8">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>ShipTrack - Accounting & Inventory Tracking System</p>
+          <p>نظام الشحنات - نظام المحاسبة وتتبع المخزون</p>
         </div>
       </footer>
     </div>

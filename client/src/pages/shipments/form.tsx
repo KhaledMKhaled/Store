@@ -16,16 +16,17 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { ArrowLeft, Save, ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, Save, ArrowLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "@/lib/i18n";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Shipment } from "@shared/schema";
 
 const formSchema = z.object({
-  shipmentName: z.string().min(1, "Shipment name is required"),
-  shipmentNumber: z.string().min(1, "Shipment number is required"),
-  backendMasterKey: z.string().min(1, "Backend master key is required"),
+  shipmentName: z.string().min(1, "اسم الشحنة مطلوب"),
+  shipmentNumber: z.string().min(1, "رقم الشحنة مطلوب"),
+  backendMasterKey: z.string().min(1, "المفتاح الرئيسي مطلوب"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -41,6 +42,7 @@ export default function ShipmentForm() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { isAdmin, canEdit } = useAuth();
+  const { t } = useTranslation();
   const isEditing = !!id && id !== "new";
 
   const { data: shipment, isLoading } = useQuery<Shipment>({
@@ -78,15 +80,15 @@ export default function ShipmentForm() {
     onSuccess: async (response) => {
       const result = await response.json();
       toast({
-        title: isEditing ? "Shipment updated" : "Shipment created",
-        description: isEditing ? "Your changes have been saved." : "Proceed to add shipment items.",
+        title: isEditing ? "تم تحديث الشحنة" : "تم إنشاء الشحنة",
+        description: isEditing ? "تم حفظ التغييرات." : "انتقل لإضافة عناصر الشحنة.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/shipments"] });
       navigate(`/shipments/${result.id}/items`);
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t.common.error,
         description: error.message,
         variant: "destructive",
       });
@@ -111,21 +113,21 @@ export default function ShipmentForm() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <PageHeader
-        title={isEditing ? "Edit Shipment" : "New Shipment"}
-        description={isEditing ? "Update shipment details" : "Create a new shipment to start tracking inventory"}
+        title={isEditing ? t.shipments.editShipment : t.shipments.newShipment}
+        description={isEditing ? "تحديث تفاصيل الشحنة" : "إنشاء شحنة جديدة لبدء تتبع المخزون"}
         actions={
           <Button variant="ghost" onClick={() => navigate("/shipments")} data-testid="button-back">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Shipments
+            <ArrowRight className="h-4 w-4" />
+            {t.common.back} إلى {t.shipments.title}
           </Button>
         }
       />
 
       <Card className="max-w-2xl">
         <CardHeader>
-          <CardTitle>Shipment Details</CardTitle>
+          <CardTitle>{t.shipments.shipmentDetails}</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -135,10 +137,10 @@ export default function ShipmentForm() {
                 name="shipmentName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Shipment Name</FormLabel>
+                    <FormLabel>{t.shipments.shipmentName}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="e.g., Electronics Import Q4 2024"
+                        placeholder="مثال: استيراد إلكترونيات الربع الرابع 2024"
                         {...field}
                         data-testid="input-shipment-name"
                       />
@@ -153,10 +155,10 @@ export default function ShipmentForm() {
                 name="shipmentNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Shipment Number</FormLabel>
+                    <FormLabel>{t.shipments.shipmentNumber}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="e.g., SHIP-2024-001"
+                        placeholder="مثال: SHIP-2024-001"
                         {...field}
                         data-testid="input-shipment-number"
                       />
@@ -171,7 +173,7 @@ export default function ShipmentForm() {
                 name="backendMasterKey"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Backend Master Key</FormLabel>
+                    <FormLabel>{t.shipments.backendMasterKey}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -182,7 +184,7 @@ export default function ShipmentForm() {
                     </FormControl>
                     {!isAdmin && (
                       <p className="text-xs text-muted-foreground">
-                        Only administrators can modify the master key
+                        فقط المسؤولين يمكنهم تعديل المفتاح الرئيسي
                       </p>
                     )}
                     <FormMessage />
@@ -197,7 +199,7 @@ export default function ShipmentForm() {
                   onClick={() => navigate("/shipments")}
                   data-testid="button-cancel"
                 >
-                  Cancel
+                  {t.common.cancel}
                 </Button>
                 <Button
                   type="submit"
@@ -205,12 +207,12 @@ export default function ShipmentForm() {
                   data-testid="button-save"
                 >
                   {mutation.isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Save className="mr-2 h-4 w-4" />
+                    <Save className="h-4 w-4" />
                   )}
-                  {isEditing ? "Save Changes" : "Create & Add Items"}
-                  {!isEditing && <ArrowRight className="ml-2 h-4 w-4" />}
+                  {isEditing ? "حفظ التغييرات" : "إنشاء وإضافة العناصر"}
+                  {!isEditing && <ArrowLeft className="h-4 w-4" />}
                 </Button>
               </div>
             </form>

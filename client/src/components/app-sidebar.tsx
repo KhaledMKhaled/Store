@@ -30,41 +30,43 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { RoleBadge } from "./role-badge";
-
-const mainNavItems = [
-  {
-    title: "Dashboard",
-    url: "/",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Shipments",
-    url: "/shipments",
-    icon: Ship,
-  },
-  {
-    title: "Suppliers",
-    url: "/suppliers",
-    icon: Building2,
-  },
-  {
-    title: "Item Types",
-    url: "/item-types",
-    icon: Package,
-  },
-];
-
-const adminNavItems = [
-  {
-    title: "Users",
-    url: "/users",
-    icon: Users,
-  },
-];
+import { useTranslation } from "@/lib/i18n";
 
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, isAdmin } = useAuth();
+  const { t } = useTranslation();
+
+  const mainNavItems = [
+    {
+      title: t.nav.dashboard,
+      url: "/",
+      icon: LayoutDashboard,
+    },
+    {
+      title: t.nav.shipments,
+      url: "/shipments",
+      icon: Ship,
+    },
+    {
+      title: t.nav.suppliers,
+      url: "/suppliers",
+      icon: Building2,
+    },
+    {
+      title: t.nav.itemTypes,
+      url: "/item-types",
+      icon: Package,
+    },
+  ];
+
+  const adminNavItems = [
+    {
+      title: t.nav.users,
+      url: "/users",
+      icon: Users,
+    },
+  ];
 
   const getInitials = (firstName?: string | null, lastName?: string | null, email?: string | null) => {
     if (firstName && lastName) {
@@ -87,24 +89,24 @@ export function AppSidebar() {
             <Ship className="h-5 w-5 text-primary-foreground" />
           </div>
           <div className="flex flex-col">
-            <span className="text-base font-semibold">ShipTrack</span>
-            <span className="text-xs text-muted-foreground">Inventory System</span>
+            <span className="text-base font-semibold">نظام الشحنات</span>
+            <span className="text-xs text-muted-foreground">إدارة المخزون</span>
           </div>
         </div>
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Main Menu</SidebarGroupLabel>
+          <SidebarGroupLabel>القائمة الرئيسية</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {mainNavItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton
                     asChild
                     isActive={location === item.url || (item.url !== "/" && location.startsWith(item.url))}
                   >
-                    <Link href={item.url} data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                    <Link href={item.url} data-testid={`nav-${item.url.replace(/\//g, '') || 'dashboard'}`}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                     </Link>
@@ -117,16 +119,16 @@ export function AppSidebar() {
 
         {isAdmin && (
           <SidebarGroup>
-            <SidebarGroupLabel>Administration</SidebarGroupLabel>
+            <SidebarGroupLabel>الإدارة</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {adminNavItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
+                  <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton
                       asChild
                       isActive={location === item.url || location.startsWith(item.url)}
                     >
-                      <Link href={item.url} data-testid={`nav-${item.title.toLowerCase()}`}>
+                      <Link href={item.url} data-testid={`nav-${item.url.replace(/\//g, '')}`}>
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
                       </Link>
@@ -155,15 +157,15 @@ export function AppSidebar() {
                       {getInitials(user?.firstName, user?.lastName, user?.email)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex flex-col items-start gap-0.5 text-left">
+                  <div className="flex flex-col items-start gap-0.5 text-right">
                     <span className="text-sm font-medium truncate max-w-[140px]">
                       {user?.firstName && user?.lastName
                         ? `${user.firstName} ${user.lastName}`
-                        : user?.email || "User"}
+                        : user?.email || "المستخدم"}
                     </span>
                     {user?.role && <RoleBadge role={user.role} />}
                   </div>
-                  <ChevronUp className="ml-auto h-4 w-4" />
+                  <ChevronUp className="h-4 w-4" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -177,7 +179,7 @@ export function AppSidebar() {
                 <DropdownMenuItem asChild>
                   <a href="/api/logout" className="flex items-center gap-2" data-testid="button-logout">
                     <LogOut className="h-4 w-4" />
-                    <span>Log out</span>
+                    <span>{t.auth.signOut}</span>
                   </a>
                 </DropdownMenuItem>
               </DropdownMenuContent>

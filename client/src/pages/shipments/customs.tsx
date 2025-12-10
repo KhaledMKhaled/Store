@@ -26,9 +26,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { ArrowLeft, Save, Loader2, Package, AlertTriangle, DollarSign, Calendar } from "lucide-react";
+import { ArrowRight, Save, Loader2, Package, AlertTriangle, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "@/lib/i18n";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Shipment, CustomsWithRelations } from "@shared/schema";
 
@@ -38,8 +39,8 @@ const customsPerTypeSchema = z.object({
   itemTypeName: z.string(),
   totalPcsPerType: z.number().min(0),
   totalCtnPerType: z.number().min(0),
-  paidCustoms: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Must be >= 0"),
-  takhreg: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Must be >= 0"),
+  paidCustoms: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "يجب أن تكون >= 0"),
+  takhreg: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "يجب أن تكون >= 0"),
 });
 
 const formSchema = z.object({
@@ -55,6 +56,7 @@ export default function CustomsPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { canEdit } = useAuth();
+  const { t } = useTranslation();
 
   const { data: shipment, isLoading: shipmentLoading } = useQuery<Shipment>({
     queryKey: ["/api/shipments", id],
@@ -87,7 +89,7 @@ export default function CustomsPage() {
         customsPerType: customs.customsPerType?.map((cpt) => ({
           id: cpt.id,
           itemTypeId: cpt.itemTypeId,
-          itemTypeName: cpt.itemType?.name || "Unknown",
+          itemTypeName: cpt.itemType?.name || "غير معروف",
           totalPcsPerType: cpt.totalPcsPerType,
           totalCtnPerType: cpt.totalCtnPerType,
           paidCustoms: String(cpt.paidCustoms),
@@ -123,20 +125,20 @@ export default function CustomsPage() {
       return await apiRequest("PUT", `/api/shipments/${id}/customs`, payload);
     },
     onSuccess: () => {
-      toast({ title: "Customs data saved successfully" });
+      toast({ title: t.customs.customsSaved });
       queryClient.invalidateQueries({ queryKey: ["/api/shipments", id, "customs"] });
     },
     onError: (error: Error) => {
-      toast({ title: "Error saving customs", description: error.message, variant: "destructive" });
+      toast({ title: "خطأ في حفظ الجمارك", description: error.message, variant: "destructive" });
     },
   });
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
+    return new Intl.NumberFormat("ar-SA", { style: "currency", currency: "USD" }).format(value);
   };
 
   const formatNumber = (value: number) => {
-    return new Intl.NumberFormat("en-US").format(value);
+    return new Intl.NumberFormat("ar-SA").format(value);
   };
 
   const isLoading = shipmentLoading || customsLoading;
@@ -152,9 +154,9 @@ export default function CustomsPage() {
   if (!shipment) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground">Shipment not found</p>
+        <p className="text-muted-foreground">الشحنة غير موجودة</p>
         <Button variant="link" onClick={() => navigate("/shipments")}>
-          Back to Shipments
+          {t.common.back} إلى {t.shipments.title}
         </Button>
       </div>
     );
@@ -162,28 +164,28 @@ export default function CustomsPage() {
 
   if (shipment.status !== "CUSTOMS_RECEIVED") {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 p-6">
         <PageHeader
-          title="Customs"
+          title={t.customs.title}
           description={`${shipment.shipmentName} - ${shipment.shipmentNumber}`}
           actions={
             <Button variant="ghost" onClick={() => navigate(`/shipments/${id}`)} data-testid="button-back">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
+              <ArrowRight className="h-4 w-4" />
+              {t.common.back}
             </Button>
           }
         />
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Customs Not Available</h3>
+            <h3 className="text-lg font-semibold mb-2">{t.customs.notAvailableYet}</h3>
             <p className="text-muted-foreground text-center max-w-md">
               {shipment.status === "CUSTOMS_IN_PROGRESS"
-                ? "Customs is currently in progress. Details will be available once the shipment is received."
-                : "Customs details are only available after the shipment status is set to 'Customs Received'."}
+                ? "الجمارك قيد التنفيذ حالياً. ستتوفر التفاصيل بمجرد استلام الشحنة."
+                : "تفاصيل الجمارك متاحة فقط بعد تغيير حالة الشحنة إلى 'تم استلام الجمارك'."}
             </p>
             <Button className="mt-6" onClick={() => navigate(`/shipments/${id}`)} data-testid="button-view-shipment">
-              View Shipment
+              {t.common.view} {t.shipments.title}
             </Button>
           </CardContent>
         </Card>
@@ -192,21 +194,21 @@ export default function CustomsPage() {
   }
 
   const workflowSteps = [
-    { id: "shipment", label: "Shipment", status: "completed" as const },
-    { id: "items", label: "Items", status: "completed" as const },
-    { id: "importing", label: "Importing", status: "completed" as const },
-    { id: "customs", label: "Customs", status: "current" as const },
+    { id: "shipment", label: t.shipments.workflow.shipment, status: "completed" as const },
+    { id: "items", label: t.shipments.workflow.items, status: "completed" as const },
+    { id: "importing", label: t.shipments.workflow.importing, status: "completed" as const },
+    { id: "customs", label: t.shipments.workflow.customsStep, status: "current" as const },
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <PageHeader
-        title="Customs"
+        title={t.customs.title}
         description={`${shipment.shipmentName} - ${shipment.shipmentNumber}`}
         actions={
           <Button variant="ghost" onClick={() => navigate(`/shipments/${id}`)} data-testid="button-back">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
+            <ArrowRight className="h-4 w-4" />
+            {t.common.back}
           </Button>
         }
       />
@@ -215,32 +217,32 @@ export default function CustomsPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Pieces Recorded"
+          title={t.customs.piecesRecorded}
           value={formatNumber(totalPiecesRecorded)}
           icon={Package}
-          description="Initial count from items"
+          description="العدد الأولي من العناصر"
         />
         <StatCard
-          title="Pieces Adjusted"
+          title={t.customs.piecesAdjusted}
           value={formatNumber(watchedAdjusted)}
           icon={Package}
-          description="After loss/damage"
+          description="بعد الفقد/التلف"
         />
         <StatCard
-          title="Loss/Damage"
+          title={t.customs.lossOrDamage}
           value={formatNumber(lossOrDamagePieces)}
           icon={AlertTriangle}
           className={lossOrDamagePieces > 0 ? "border-amber-500/50" : ""}
         />
-        <StatCard title="Total Paid" value={formatCurrency(totalPaidCustoms + totalPaidTakhreg)} icon={DollarSign} />
+        <StatCard title={t.customs.totalPaid} value={formatCurrency(totalPaidCustoms + totalPaidTakhreg)} icon={DollarSign} />
       </div>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit((data) => saveMutation.mutate(data))} className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Customs Information</CardTitle>
-              <CardDescription>Record bill date and piece adjustments</CardDescription>
+              <CardTitle>{t.customs.customsInfo}</CardTitle>
+              <CardDescription>تسجيل تاريخ الفاتورة وتعديلات القطع</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-6 sm:grid-cols-3">
@@ -249,7 +251,7 @@ export default function CustomsPage() {
                   name="billDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Bill Date</FormLabel>
+                      <FormLabel>{t.customs.billDate}</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} disabled={!canEdit} data-testid="input-bill-date" />
                       </FormControl>
@@ -259,11 +261,11 @@ export default function CustomsPage() {
                 />
 
                 <div>
-                  <FormLabel>Total Pieces Recorded</FormLabel>
+                  <FormLabel>{t.customs.totalPiecesRecorded}</FormLabel>
                   <div className="h-10 flex items-center px-3 rounded-md bg-muted font-mono">
                     {formatNumber(totalPiecesRecorded)}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">From shipment items</p>
+                  <p className="text-xs text-muted-foreground mt-1">من عناصر الشحنة</p>
                 </div>
 
                 <FormField
@@ -271,7 +273,7 @@ export default function CustomsPage() {
                   name="totalPiecesAdjusted"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Total Pieces Adjusted</FormLabel>
+                      <FormLabel>{t.customs.totalPiecesAdjusted}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -284,7 +286,7 @@ export default function CustomsPage() {
                         />
                       </FormControl>
                       <p className="text-xs text-muted-foreground">
-                        Loss/Damage: <span className={lossOrDamagePieces > 0 ? "text-amber-600" : ""}>{formatNumber(lossOrDamagePieces)}</span>
+                        الفقد/التلف: <span className={lossOrDamagePieces > 0 ? "text-amber-600" : ""}>{formatNumber(lossOrDamagePieces)}</span>
                       </p>
                       <FormMessage />
                     </FormItem>
@@ -296,34 +298,34 @@ export default function CustomsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Per-Type Breakdown</CardTitle>
-              <CardDescription>Customs fees and takhreg per item type</CardDescription>
+              <CardTitle>{t.customs.perTypeBreakdown}</CardTitle>
+              <CardDescription>رسوم الجمارك والتخريج لكل نوع عنصر</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Item Type</TableHead>
-                      <TableHead className="text-right">PCS</TableHead>
-                      <TableHead className="text-right">CTN</TableHead>
-                      <TableHead className="text-right">Paid Customs</TableHead>
-                      <TableHead className="text-right">Takhreg</TableHead>
+                      <TableHead>{t.customs.itemType}</TableHead>
+                      <TableHead className="text-left">{t.items.cou}</TableHead>
+                      <TableHead className="text-left">{t.items.ctn}</TableHead>
+                      <TableHead className="text-left">{t.customs.paidCustoms}</TableHead>
+                      <TableHead className="text-left">{t.customs.takhreg}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {fields.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                          No item types in this shipment
+                          لا توجد أنواع عناصر في هذه الشحنة
                         </TableCell>
                       </TableRow>
                     ) : (
                       fields.map((field, index) => (
                         <TableRow key={field.id} data-testid={`customs-type-row-${index}`}>
                           <TableCell className="font-medium">{field.itemTypeName}</TableCell>
-                          <TableCell className="text-right font-mono">{formatNumber(field.totalPcsPerType)}</TableCell>
-                          <TableCell className="text-right font-mono">{formatNumber(field.totalCtnPerType)}</TableCell>
+                          <TableCell className="text-left font-mono">{formatNumber(field.totalPcsPerType)}</TableCell>
+                          <TableCell className="text-left font-mono">{formatNumber(field.totalCtnPerType)}</TableCell>
                           <TableCell>
                             <FormField
                               control={form.control}
@@ -334,7 +336,7 @@ export default function CustomsPage() {
                                   step="0.01"
                                   min={0}
                                   {...field}
-                                  className="w-[120px] text-right font-mono ml-auto"
+                                  className="w-[120px] text-left font-mono"
                                   disabled={!canEdit}
                                 />
                               )}
@@ -350,7 +352,7 @@ export default function CustomsPage() {
                                   step="0.01"
                                   min={0}
                                   {...field}
-                                  className="w-[120px] text-right font-mono ml-auto"
+                                  className="w-[120px] text-left font-mono"
                                   disabled={!canEdit}
                                 />
                               )}
@@ -361,9 +363,9 @@ export default function CustomsPage() {
                     )}
                     {fields.length > 0 && (
                       <TableRow className="bg-muted/50 font-medium">
-                        <TableCell colSpan={3}>Total</TableCell>
-                        <TableCell className="text-right font-mono">{formatCurrency(totalPaidCustoms)}</TableCell>
-                        <TableCell className="text-right font-mono">{formatCurrency(totalPaidTakhreg)}</TableCell>
+                        <TableCell colSpan={3}>{t.common.total}</TableCell>
+                        <TableCell className="text-left font-mono">{formatCurrency(totalPaidCustoms)}</TableCell>
+                        <TableCell className="text-left font-mono">{formatCurrency(totalPaidTakhreg)}</TableCell>
                       </TableRow>
                     )}
                   </TableBody>
@@ -375,11 +377,11 @@ export default function CustomsPage() {
           {canEdit && (
             <div className="flex items-center justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => navigate(`/shipments/${id}`)}>
-                Cancel
+                {t.common.cancel}
               </Button>
               <Button type="submit" disabled={saveMutation.isPending} data-testid="button-save-customs">
-                {saveMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                Save Customs
+                {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {t.customs.saveCustoms}
               </Button>
             </div>
           )}

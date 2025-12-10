@@ -42,8 +42,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import {
-  ArrowLeft,
   ArrowRight,
+  ArrowLeft,
   Plus,
   Trash2,
   Save,
@@ -53,17 +53,18 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "@/lib/i18n";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Shipment, ShipmentItemWithRelations, Supplier, ItemType } from "@shared/schema";
 
 const itemSchema = z.object({
   id: z.number().optional(),
-  supplierId: z.number().min(1, "Required"),
-  itemTypeId: z.number().min(1, "Required"),
+  supplierId: z.number().min(1, "مطلوب"),
+  itemTypeId: z.number().min(1, "مطلوب"),
   itemPhotoUrl: z.string().optional(),
-  ctn: z.number().min(0, "Must be >= 0"),
-  pcsPerCtn: z.number().min(0, "Must be >= 0"),
-  pri: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Must be >= 0"),
+  ctn: z.number().min(0, "يجب أن يكون >= 0"),
+  pcsPerCtn: z.number().min(0, "يجب أن يكون >= 0"),
+  pri: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "يجب أن يكون >= 0"),
 });
 
 const formSchema = z.object({
@@ -73,7 +74,7 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 const quickAddSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1, "الاسم مطلوب"),
   description: z.string().optional(),
 });
 
@@ -82,6 +83,7 @@ export default function ShipmentItems() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { canEdit } = useAuth();
+  const { t } = useTranslation();
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
   const [quickAddType, setQuickAddType] = useState<"supplier" | "itemType" | null>(null);
 
@@ -171,12 +173,12 @@ export default function ShipmentItems() {
       return await apiRequest("PUT", `/api/shipments/${id}/items`, { items: itemsWithCalculations });
     },
     onSuccess: () => {
-      toast({ title: "Items saved successfully" });
+      toast({ title: t.items.itemsSaved });
       queryClient.invalidateQueries({ queryKey: ["/api/shipments", id, "items"] });
       queryClient.invalidateQueries({ queryKey: ["/api/shipments", id] });
     },
     onError: (error: Error) => {
-      toast({ title: "Error saving items", description: error.message, variant: "destructive" });
+      toast({ title: "خطأ في حفظ العناصر", description: error.message, variant: "destructive" });
     },
   });
 
@@ -186,7 +188,7 @@ export default function ShipmentItems() {
       return await apiRequest("POST", endpoint, data);
     },
     onSuccess: () => {
-      toast({ title: `${quickAddType === "supplier" ? "Supplier" : "Item Type"} created` });
+      toast({ title: `تم إنشاء ${quickAddType === "supplier" ? "المورد" : "نوع العنصر"}` });
       queryClient.invalidateQueries({
         queryKey: [quickAddType === "supplier" ? "/api/suppliers" : "/api/item-types"],
       });
@@ -194,16 +196,16 @@ export default function ShipmentItems() {
       quickAddForm.reset();
     },
     onError: (error: Error) => {
-      toast({ title: "Error creating", description: error.message, variant: "destructive" });
+      toast({ title: "خطأ في الإنشاء", description: error.message, variant: "destructive" });
     },
   });
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
+    return new Intl.NumberFormat("ar-SA", { style: "currency", currency: "USD" }).format(value);
   };
 
   const formatNumber = (value: number) => {
-    return new Intl.NumberFormat("en-US").format(value);
+    return new Intl.NumberFormat("ar-SA").format(value);
   };
 
   const calculateRowValues = (index: number) => {
@@ -230,31 +232,31 @@ export default function ShipmentItems() {
   if (!shipment) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground">Shipment not found</p>
+        <p className="text-muted-foreground">الشحنة غير موجودة</p>
         <Button variant="link" onClick={() => navigate("/shipments")}>
-          Back to Shipments
+          {t.common.back} إلى {t.shipments.title}
         </Button>
       </div>
     );
   }
 
   const workflowSteps = [
-    { id: "shipment", label: "Shipment", status: "completed" as const },
-    { id: "items", label: "Items", status: "current" as const },
-    { id: "importing", label: "Importing", status: "upcoming" as const },
-    { id: "customs", label: "Customs", status: "upcoming" as const },
+    { id: "shipment", label: t.shipments.workflow.shipment, status: "completed" as const },
+    { id: "items", label: t.shipments.workflow.items, status: "current" as const },
+    { id: "importing", label: t.shipments.workflow.importing, status: "upcoming" as const },
+    { id: "customs", label: t.shipments.workflow.customsStep, status: "upcoming" as const },
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <PageHeader
-        title="Shipment Items"
+        title={t.items.title}
         description={`${shipment.shipmentName} - ${shipment.shipmentNumber}`}
         actions={
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={() => navigate(`/shipments/${id}`)} data-testid="button-back">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
+              <ArrowRight className="h-4 w-4" />
+              {t.common.back}
             </Button>
           </div>
         }
@@ -263,14 +265,14 @@ export default function ShipmentItems() {
       <WorkflowSteps steps={workflowSteps} />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard title="Total CTN" value={formatNumber(totals.totalCtn)} icon={Package} />
-        <StatCard title="Total PCS" value={formatNumber(totals.totalPcs)} icon={Package} />
-        <StatCard title="Total Price" value={formatCurrency(totals.totalPrice)} icon={DollarSign} />
+        <StatCard title={t.items.totalCtn} value={formatNumber(totals.totalCtn)} icon={Package} />
+        <StatCard title={t.items.totalPcs} value={formatNumber(totals.totalPcs)} icon={Package} />
+        <StatCard title={t.items.totalPrice} value={formatCurrency(totals.totalPrice)} icon={DollarSign} />
       </div>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4">
-          <CardTitle>Items ({fields.length})</CardTitle>
+          <CardTitle>{t.common.items} ({fields.length})</CardTitle>
           {canEdit && (
             <Button
               size="sm"
@@ -279,8 +281,8 @@ export default function ShipmentItems() {
               }
               data-testid="button-add-item"
             >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Item
+              <Plus className="h-4 w-4" />
+              {t.items.addItem}
             </Button>
           )}
         </CardHeader>
@@ -291,13 +293,13 @@ export default function ShipmentItems() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[180px]">Supplier</TableHead>
-                      <TableHead className="w-[180px]">Item Type</TableHead>
-                      <TableHead className="w-[100px] text-right">CTN</TableHead>
-                      <TableHead className="w-[100px] text-right">PCS/CTN</TableHead>
-                      <TableHead className="w-[100px] text-right">COU</TableHead>
-                      <TableHead className="w-[120px] text-right">Price</TableHead>
-                      <TableHead className="w-[140px] text-right">Total</TableHead>
+                      <TableHead className="w-[180px]">{t.items.supplier}</TableHead>
+                      <TableHead className="w-[180px]">{t.items.itemType}</TableHead>
+                      <TableHead className="w-[100px] text-left">{t.items.ctn}</TableHead>
+                      <TableHead className="w-[100px] text-left">{t.items.pcsPerCtn}</TableHead>
+                      <TableHead className="w-[100px] text-left">{t.items.cou}</TableHead>
+                      <TableHead className="w-[120px] text-left">{t.items.pri}</TableHead>
+                      <TableHead className="w-[140px] text-left">{t.items.total}</TableHead>
                       {canEdit && <TableHead className="w-[60px]"></TableHead>}
                     </TableRow>
                   </TableHeader>
@@ -305,7 +307,7 @@ export default function ShipmentItems() {
                     {fields.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={canEdit ? 8 : 7} className="h-24 text-center">
-                          <p className="text-muted-foreground">No items yet. Click "Add Item" to get started.</p>
+                          <p className="text-muted-foreground">{t.items.noItems}</p>
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -325,7 +327,7 @@ export default function ShipmentItems() {
                                       disabled={!canEdit}
                                     >
                                       <SelectTrigger className="w-[150px]">
-                                        <SelectValue placeholder="Select" />
+                                        <SelectValue placeholder="اختر" />
                                       </SelectTrigger>
                                       <SelectContent>
                                         {suppliers?.map((s) => (
@@ -362,7 +364,7 @@ export default function ShipmentItems() {
                                       disabled={!canEdit}
                                     >
                                       <SelectTrigger className="w-[150px]">
-                                        <SelectValue placeholder="Select" />
+                                        <SelectValue placeholder="اختر" />
                                       </SelectTrigger>
                                       <SelectContent>
                                         {itemTypes?.map((t) => (
@@ -397,7 +399,7 @@ export default function ShipmentItems() {
                                     min={0}
                                     {...field}
                                     onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                                    className="w-[80px] text-right font-mono"
+                                    className="w-[80px] text-left font-mono"
                                     disabled={!canEdit}
                                   />
                                 )}
@@ -413,13 +415,13 @@ export default function ShipmentItems() {
                                     min={0}
                                     {...field}
                                     onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                                    className="w-[80px] text-right font-mono"
+                                    className="w-[80px] text-left font-mono"
                                     disabled={!canEdit}
                                   />
                                 )}
                               />
                             </TableCell>
-                            <TableCell className="text-right font-mono">{formatNumber(cou)}</TableCell>
+                            <TableCell className="text-left font-mono">{formatNumber(cou)}</TableCell>
                             <TableCell>
                               <FormField
                                 control={form.control}
@@ -430,13 +432,13 @@ export default function ShipmentItems() {
                                     step="0.01"
                                     min={0}
                                     {...field}
-                                    className="w-[100px] text-right font-mono"
+                                    className="w-[100px] text-left font-mono"
                                     disabled={!canEdit}
                                   />
                                 )}
                               />
                             </TableCell>
-                            <TableCell className="text-right font-mono font-medium">
+                            <TableCell className="text-left font-mono font-medium">
                               {formatCurrency(total)}
                             </TableCell>
                             {canEdit && (
@@ -463,16 +465,16 @@ export default function ShipmentItems() {
               {canEdit && fields.length > 0 && (
                 <div className="flex items-center justify-between mt-6 pt-6 border-t">
                   <Button type="button" variant="outline" onClick={() => navigate(`/shipments/${id}`)}>
-                    Cancel
+                    {t.common.cancel}
                   </Button>
                   <div className="flex items-center gap-2">
                     <Button type="submit" disabled={saveMutation.isPending} data-testid="button-save-items">
                       {saveMutation.isPending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <Save className="mr-2 h-4 w-4" />
+                        <Save className="h-4 w-4" />
                       )}
-                      Save Items
+                      {t.items.saveItems}
                     </Button>
                     <Button
                       type="button"
@@ -484,8 +486,8 @@ export default function ShipmentItems() {
                       disabled={saveMutation.isPending}
                       data-testid="button-next-importing"
                     >
-                      Save & Continue
-                      <ArrowRight className="ml-2 h-4 w-4" />
+                      {t.items.saveAndContinue}
+                      <ArrowLeft className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -498,9 +500,9 @@ export default function ShipmentItems() {
       <ConfirmDialog
         open={deleteIndex !== null}
         onOpenChange={(open) => !open && setDeleteIndex(null)}
-        title="Delete Item"
-        description="Are you sure you want to remove this item? This action cannot be undone."
-        confirmLabel="Delete"
+        title={t.items.deleteItem}
+        description={t.items.deleteConfirm}
+        confirmLabel={t.common.delete}
         onConfirm={() => {
           if (deleteIndex !== null) {
             remove(deleteIndex);
@@ -514,7 +516,7 @@ export default function ShipmentItems() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Add New {quickAddType === "supplier" ? "Supplier" : "Item Type"}
+              {t.common.add} {quickAddType === "supplier" ? t.suppliers.newSupplier : t.itemTypes.newItemType}
             </DialogTitle>
           </DialogHeader>
           <Form {...quickAddForm}>
@@ -525,7 +527,7 @@ export default function ShipmentItems() {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Name</FormLabel>
+                      <FormLabel>{t.common.name}</FormLabel>
                       <FormControl>
                         <Input {...field} data-testid="input-quick-add-name" />
                       </FormControl>
@@ -539,7 +541,7 @@ export default function ShipmentItems() {
                     name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Description (Optional)</FormLabel>
+                        <FormLabel>{t.common.description} ({t.common.optional})</FormLabel>
                         <FormControl>
                           <Input {...field} data-testid="input-quick-add-description" />
                         </FormControl>
@@ -551,11 +553,11 @@ export default function ShipmentItems() {
               </div>
               <DialogFooter className="mt-6">
                 <Button type="button" variant="outline" onClick={() => setQuickAddType(null)}>
-                  Cancel
+                  {t.common.cancel}
                 </Button>
                 <Button type="submit" disabled={quickAddMutation.isPending} data-testid="button-quick-add-save">
-                  {quickAddMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create
+                  {quickAddMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {t.common.create}
                 </Button>
               </DialogFooter>
             </form>

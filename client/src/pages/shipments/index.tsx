@@ -25,6 +25,7 @@ import {
 import { Plus, Search, MoreHorizontal, Eye, Edit, Trash2, Ship, Package, FileText, ClipboardCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "@/lib/i18n";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { ShipmentWithRelations, Supplier } from "@shared/schema";
 
@@ -32,6 +33,7 @@ export default function ShipmentsPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { isAdmin, canEdit } = useAuth();
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [supplierFilter, setSupplierFilter] = useState<string>("all");
@@ -51,13 +53,13 @@ export default function ShipmentsPage() {
       await apiRequest("DELETE", `/api/shipments/${id}`);
     },
     onSuccess: () => {
-      toast({ title: "Shipment deleted successfully" });
+      toast({ title: "تم حذف الشحنة بنجاح" });
       queryClient.invalidateQueries({ queryKey: ["/api/shipments"] });
       setDeleteShipment(null);
     },
     onError: (error: Error) => {
       toast({
-        title: "Error deleting shipment",
+        title: "خطأ في حذف الشحنة",
         description: error.message,
         variant: "destructive",
       });
@@ -67,7 +69,7 @@ export default function ShipmentsPage() {
   const formatCurrency = (value: string | number | null) => {
     if (!value) return "-";
     const num = typeof value === "string" ? parseFloat(value) : value;
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("ar-SA", {
       style: "currency",
       currency: "USD",
     }).format(num);
@@ -75,7 +77,7 @@ export default function ShipmentsPage() {
 
   const columns = [
     {
-      header: "Shipment",
+      header: t.shipments.title,
       accessor: (row: ShipmentWithRelations) => (
         <div>
           <p className="font-medium">{row.shipmentName}</p>
@@ -84,24 +86,24 @@ export default function ShipmentsPage() {
       ),
     },
     {
-      header: "Master Key",
+      header: t.shipments.masterKey,
       accessor: "backendMasterKey" as const,
       className: "font-mono text-xs",
     },
     {
-      header: "Status",
+      header: t.common.status,
       accessor: (row: ShipmentWithRelations) => <StatusBadge status={row.status} />,
     },
     {
-      header: "Total Price",
+      header: t.common.total,
       accessor: (row: ShipmentWithRelations) =>
         formatCurrency(row.importingDetails?.totalShipmentPrice || null),
-      className: "text-right font-mono",
+      className: "text-left font-mono",
     },
     {
-      header: "Created",
+      header: t.shipments.createdAt,
       accessor: (row: ShipmentWithRelations) =>
-        row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "-",
+        row.createdAt ? new Date(row.createdAt).toLocaleDateString("ar-SA") : "-",
     },
     {
       header: "",
@@ -114,28 +116,28 @@ export default function ShipmentsPage() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => navigate(`/shipments/${row.id}`)}>
-              <Eye className="mr-2 h-4 w-4" />
-              View
+              <Eye className="h-4 w-4" />
+              {t.common.view}
             </DropdownMenuItem>
             {canEdit && (
               <DropdownMenuItem onClick={() => navigate(`/shipments/${row.id}/edit`)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
+                <Edit className="h-4 w-4" />
+                {t.common.edit}
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate(`/shipments/${row.id}/items`)}>
-              <Package className="mr-2 h-4 w-4" />
-              Shipment Items
+              <Package className="h-4 w-4" />
+              {t.shipments.shipmentItems}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate(`/shipments/${row.id}/importing`)}>
-              <FileText className="mr-2 h-4 w-4" />
-              Importing Details
+              <FileText className="h-4 w-4" />
+              {t.shipments.importingDetails}
             </DropdownMenuItem>
             {row.status === "CUSTOMS_RECEIVED" && (
               <DropdownMenuItem onClick={() => navigate(`/shipments/${row.id}/customs`)}>
-                <ClipboardCheck className="mr-2 h-4 w-4" />
-                Customs
+                <ClipboardCheck className="h-4 w-4" />
+                {t.shipments.customs}
               </DropdownMenuItem>
             )}
             {isAdmin && (
@@ -145,8 +147,8 @@ export default function ShipmentsPage() {
                   onClick={() => setDeleteShipment(row)}
                   className="text-destructive focus:text-destructive"
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
+                  <Trash2 className="h-4 w-4" />
+                  {t.common.delete}
                 </DropdownMenuItem>
               </>
             )}
@@ -159,16 +161,16 @@ export default function ShipmentsPage() {
 
   if (!isLoading && (!shipments?.data || shipments.data.length === 0) && !search && statusFilter === "all") {
     return (
-      <div className="space-y-8">
-        <PageHeader title="Shipments" description="Manage your imported shipments" />
+      <div className="space-y-8 p-6">
+        <PageHeader title={t.shipments.title} description="إدارة شحناتك المستوردة" />
         <EmptyState
           icon={Ship}
-          title="No shipments yet"
-          description="Get started by creating your first shipment to track inventory and customs."
+          title={t.shipments.noShipments}
+          description="ابدأ بإنشاء أول شحنة لتتبع المخزون والجمارك."
           action={
             canEdit
               ? {
-                  label: "Create Shipment",
+                  label: t.shipments.newShipment,
                   onClick: () => navigate("/shipments/new"),
                 }
               : undefined
@@ -179,16 +181,16 @@ export default function ShipmentsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <PageHeader
-        title="Shipments"
-        description="Manage your imported shipments"
+        title={t.shipments.title}
+        description="إدارة شحناتك المستوردة"
         actions={
           canEdit && (
             <Button asChild data-testid="button-new-shipment">
               <Link href="/shipments/new">
-                <Plus className="mr-2 h-4 w-4" />
-                New Shipment
+                <Plus className="h-4 w-4" />
+                {t.shipments.newShipment}
               </Link>
             </Button>
           )
@@ -197,34 +199,34 @@ export default function ShipmentsPage() {
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search shipments..."
+            placeholder="بحث في الشحنات..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            className="pr-9"
             data-testid="input-search-shipments"
           />
         </div>
         <div className="flex gap-2">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[180px]" data-testid="select-status-filter">
-              <SelectValue placeholder="All Statuses" />
+              <SelectValue placeholder="جميع الحالات" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="CREATED">Created</SelectItem>
-              <SelectItem value="IMPORTING_DETAILS_DONE">Import Details Done</SelectItem>
-              <SelectItem value="CUSTOMS_IN_PROGRESS">Customs In Progress</SelectItem>
-              <SelectItem value="CUSTOMS_RECEIVED">Customs Received</SelectItem>
+              <SelectItem value="all">جميع الحالات</SelectItem>
+              <SelectItem value="CREATED">{t.shipments.statuses.CREATED}</SelectItem>
+              <SelectItem value="IMPORTING_DETAILS_DONE">{t.shipments.statuses.IMPORTING_DETAILS_DONE}</SelectItem>
+              <SelectItem value="CUSTOMS_IN_PROGRESS">{t.shipments.statuses.CUSTOMS_IN_PROGRESS}</SelectItem>
+              <SelectItem value="CUSTOMS_RECEIVED">{t.shipments.statuses.CUSTOMS_RECEIVED}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={supplierFilter} onValueChange={setSupplierFilter}>
             <SelectTrigger className="w-[180px]" data-testid="select-supplier-filter">
-              <SelectValue placeholder="All Suppliers" />
+              <SelectValue placeholder="جميع الموردين" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Suppliers</SelectItem>
+              <SelectItem value="all">جميع الموردين</SelectItem>
               {suppliers?.map((supplier) => (
                 <SelectItem key={supplier.id} value={String(supplier.id)}>
                   {supplier.name}
@@ -243,15 +245,15 @@ export default function ShipmentsPage() {
         page={page}
         totalPages={shipments?.pages || 1}
         onPageChange={setPage}
-        emptyMessage="No shipments found"
+        emptyMessage="لم يتم العثور على شحنات"
       />
 
       <ConfirmDialog
         open={!!deleteShipment}
         onOpenChange={(open) => !open && setDeleteShipment(null)}
-        title="Delete Shipment"
-        description={`Are you sure you want to delete "${deleteShipment?.shipmentName}"? This action cannot be undone and will remove all associated items, importing details, and customs records.`}
-        confirmLabel="Delete"
+        title="حذف الشحنة"
+        description={`هل أنت متأكد من حذف "${deleteShipment?.shipmentName}"؟ لا يمكن التراجع عن هذا الإجراء وسيتم إزالة جميع العناصر والتفاصيل المرتبطة.`}
+        confirmLabel={t.common.delete}
         onConfirm={() => deleteShipment && deleteMutation.mutate(deleteShipment.id)}
         variant="destructive"
         isLoading={deleteMutation.isPending}

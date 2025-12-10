@@ -6,7 +6,8 @@ import { DataTable } from "@/components/data-table";
 import { StatusBadge } from "@/components/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Ship, Package, DollarSign, FileText, Plus, ArrowRight } from "lucide-react";
+import { Ship, Package, DollarSign, FileText, Plus, ArrowLeft } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 import type { ShipmentWithRelations, Customs } from "@shared/schema";
 
 interface DashboardStats {
@@ -25,6 +26,8 @@ interface CustomsSummary extends Customs {
 }
 
 export default function Dashboard() {
+  const { t } = useTranslation();
+  
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ["/api/dashboard/stats"],
   });
@@ -38,7 +41,7 @@ export default function Dashboard() {
   });
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("ar-SA", {
       style: "currency",
       currency: "USD",
       minimumFractionDigits: 2,
@@ -46,12 +49,12 @@ export default function Dashboard() {
   };
 
   const formatNumber = (value: number) => {
-    return new Intl.NumberFormat("en-US").format(value);
+    return new Intl.NumberFormat("ar-SA").format(value);
   };
 
   const shipmentColumns = [
     {
-      header: "Shipment",
+      header: t.shipments.title,
       accessor: (row: ShipmentWithRelations) => (
         <div>
           <p className="font-medium">{row.shipmentName}</p>
@@ -60,31 +63,31 @@ export default function Dashboard() {
       ),
     },
     {
-      header: "Status",
+      header: t.common.status,
       accessor: (row: ShipmentWithRelations) => <StatusBadge status={row.status} />,
     },
     {
-      header: "Created",
+      header: t.common.date,
       accessor: (row: ShipmentWithRelations) =>
-        row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "-",
+        row.createdAt ? new Date(row.createdAt).toLocaleDateString("ar-SA") : "-",
     },
     {
       header: "",
       accessor: (row: ShipmentWithRelations) => (
         <Link href={`/shipments/${row.id}`}>
           <Button variant="ghost" size="sm" data-testid={`button-view-shipment-${row.id}`}>
-            View
-            <ArrowRight className="ml-1 h-3 w-3" />
+            {t.common.view}
+            <ArrowLeft className="h-3 w-3" />
           </Button>
         </Link>
       ),
-      className: "text-right",
+      className: "text-left",
     },
   ];
 
   const customsColumns = [
     {
-      header: "Shipment",
+      header: t.shipments.title,
       accessor: (row: CustomsSummary) => (
         <div>
           <p className="font-medium">{row.shipmentName}</p>
@@ -93,37 +96,37 @@ export default function Dashboard() {
       ),
     },
     {
-      header: "Bill Date",
+      header: t.customs.billDate,
       accessor: (row: CustomsSummary) =>
-        row.billDate ? new Date(row.billDate).toLocaleDateString() : "-",
+        row.billDate ? new Date(row.billDate).toLocaleDateString("ar-SA") : "-",
     },
     {
-      header: "Pieces",
+      header: t.customs.totalPiecesAdjusted,
       accessor: (row: CustomsSummary) => formatNumber(row.totalPiecesAdjusted),
-      className: "text-right font-mono",
+      className: "text-left font-mono",
     },
     {
-      header: "Customs Paid",
+      header: t.customs.paidCustoms,
       accessor: (row: CustomsSummary) => formatCurrency(row.totalPaidCustoms || 0),
-      className: "text-right font-mono",
+      className: "text-left font-mono",
     },
     {
-      header: "Takhreg",
+      header: t.customs.takhreg,
       accessor: (row: CustomsSummary) => formatCurrency(row.totalPaidTakhreg || 0),
-      className: "text-right font-mono",
+      className: "text-left font-mono",
     },
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-6">
       <PageHeader
-        title="Dashboard"
-        description="Overview of your shipments and inventory"
+        title={t.dashboard.title}
+        description="نظرة عامة على شحناتك ومخزونك"
         actions={
           <Button asChild data-testid="button-new-shipment">
             <Link href="/shipments/new">
-              <Plus className="mr-2 h-4 w-4" />
-              New Shipment
+              <Plus className="h-4 w-4" />
+              {t.shipments.newShipment}
             </Link>
           </Button>
         }
@@ -131,22 +134,22 @@ export default function Dashboard() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Total Shipments"
+          title={t.dashboard.totalShipments}
           value={statsLoading ? "..." : formatNumber(stats?.totalShipments || 0)}
           icon={Ship}
         />
         <StatCard
-          title="Total CTN"
+          title={t.dashboard.totalContainers}
           value={statsLoading ? "..." : formatNumber(stats?.totalCtn || 0)}
           icon={Package}
         />
         <StatCard
-          title="Total PCS"
+          title={t.dashboard.totalPieces}
           value={statsLoading ? "..." : formatNumber(stats?.totalPcs || 0)}
           icon={Package}
         />
         <StatCard
-          title="Total Value"
+          title={t.dashboard.totalValue}
           value={statsLoading ? "..." : formatCurrency(stats?.totalValue || 0)}
           icon={DollarSign}
         />
@@ -155,11 +158,11 @@ export default function Dashboard() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
-            <CardTitle className="text-lg font-semibold">Recent Shipments</CardTitle>
+            <CardTitle className="text-lg font-semibold">{t.dashboard.recentShipments}</CardTitle>
             <Button variant="ghost" size="sm" asChild>
               <Link href="/shipments" data-testid="link-view-all-shipments">
-                View All
-                <ArrowRight className="ml-1 h-3 w-3" />
+                عرض الكل
+                <ArrowLeft className="h-3 w-3" />
               </Link>
             </Button>
           </CardHeader>
@@ -169,14 +172,14 @@ export default function Dashboard() {
               data={recentShipments || []}
               isLoading={shipmentsLoading}
               rowKey={(row) => row.id}
-              emptyMessage="No shipments yet"
+              emptyMessage="لا توجد شحنات بعد"
             />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
-            <CardTitle className="text-lg font-semibold">Customs Summary</CardTitle>
+            <CardTitle className="text-lg font-semibold">ملخص الجمارك</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <DataTable
@@ -184,7 +187,7 @@ export default function Dashboard() {
               data={customsSummary || []}
               isLoading={customsLoading}
               rowKey={(row) => row.id}
-              emptyMessage="No customs records yet"
+              emptyMessage="لا توجد سجلات جمارك بعد"
             />
           </CardContent>
         </Card>
@@ -193,7 +196,7 @@ export default function Dashboard() {
       {stats?.shipmentsByStatus && Object.keys(stats.shipmentsByStatus).length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">Shipments by Status</CardTitle>
+            <CardTitle className="text-lg font-semibold">{t.dashboard.shipmentsByStatus}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

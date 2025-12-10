@@ -31,6 +31,7 @@ import {
 import { MoreHorizontal, Edit, Users, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "@/lib/i18n";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { User } from "@shared/schema";
 
@@ -38,6 +39,7 @@ export default function UsersPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { isAdmin, isLoading: authLoading } = useAuth();
+  const { t } = useTranslation();
   const [editUser, setEditUser] = useState<User | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>("");
 
@@ -57,12 +59,12 @@ export default function UsersPage() {
       return await apiRequest("PATCH", `/api/users/${userId}/role`, { role });
     },
     onSuccess: () => {
-      toast({ title: "User role updated" });
+      toast({ title: "تم تحديث دور المستخدم" });
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       setEditUser(null);
     },
     onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: t.common.error, description: error.message, variant: "destructive" });
     },
   });
 
@@ -86,7 +88,7 @@ export default function UsersPage() {
 
   const columns = [
     {
-      header: "User",
+      header: t.users.user,
       accessor: (row: User) => (
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">
@@ -97,7 +99,7 @@ export default function UsersPage() {
             <p className="font-medium">
               {row.firstName && row.lastName
                 ? `${row.firstName} ${row.lastName}`
-                : row.email || "Unknown"}
+                : row.email || "غير معروف"}
             </p>
             {row.firstName && row.email && (
               <p className="text-xs text-muted-foreground">{row.email}</p>
@@ -107,12 +109,12 @@ export default function UsersPage() {
       ),
     },
     {
-      header: "Role",
+      header: t.users.role,
       accessor: (row: User) => <RoleBadge role={row.role} />,
     },
     {
-      header: "Joined",
-      accessor: (row: User) => row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "-",
+      header: t.users.joined,
+      accessor: (row: User) => row.createdAt ? new Date(row.createdAt).toLocaleDateString("ar-SA") : "-",
     },
     {
       header: "",
@@ -125,8 +127,8 @@ export default function UsersPage() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => openRoleDialog(row)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Change Role
+              <Edit className="h-4 w-4" />
+              {t.users.changeRole}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -149,22 +151,22 @@ export default function UsersPage() {
 
   if (!isLoading && (!users || users.length === 0)) {
     return (
-      <div className="space-y-8">
-        <PageHeader title="Users" description="Manage user accounts and roles" />
+      <div className="space-y-8 p-6">
+        <PageHeader title={t.users.title} description="إدارة حسابات المستخدمين وأدوارهم" />
         <EmptyState
           icon={Users}
-          title="No users found"
-          description="Users will appear here once they sign in to the application."
+          title={t.users.noUsers}
+          description="سيظهر المستخدمون هنا بمجرد تسجيل دخولهم إلى التطبيق."
         />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <PageHeader
-        title="Users"
-        description="Manage user accounts and roles"
+        title={t.users.title}
+        description="إدارة حسابات المستخدمين وأدوارهم"
       />
 
       <DataTable
@@ -172,15 +174,15 @@ export default function UsersPage() {
         data={users || []}
         isLoading={isLoading}
         rowKey={(row) => row.id}
-        emptyMessage="No users found"
+        emptyMessage="لم يتم العثور على مستخدمين"
       />
 
       <Dialog open={!!editUser} onOpenChange={(open) => !open && setEditUser(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Change User Role</DialogTitle>
+            <DialogTitle>{t.users.changeRole}</DialogTitle>
             <DialogDescription>
-              Update the role for{" "}
+              تحديث الدور لـ{" "}
               {editUser?.firstName && editUser?.lastName
                 ? `${editUser.firstName} ${editUser.lastName}`
                 : editUser?.email}
@@ -189,26 +191,26 @@ export default function UsersPage() {
           <div className="py-4">
             <Select value={selectedRole} onValueChange={setSelectedRole}>
               <SelectTrigger data-testid="select-user-role">
-                <SelectValue placeholder="Select a role" />
+                <SelectValue placeholder="اختر دوراً" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ADMIN">Admin - Full access</SelectItem>
-                <SelectItem value="OPERATOR">Operator - Create & edit</SelectItem>
-                <SelectItem value="VIEWER">Viewer - Read only</SelectItem>
+                <SelectItem value="ADMIN">{t.users.roles.ADMIN} - وصول كامل</SelectItem>
+                <SelectItem value="OPERATOR">{t.users.roles.OPERATOR} - إنشاء وتعديل</SelectItem>
+                <SelectItem value="VIEWER">{t.users.roles.VIEWER} - قراءة فقط</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setEditUser(null)}>
-              Cancel
+              {t.common.cancel}
             </Button>
             <Button
               onClick={() => editUser && updateRoleMutation.mutate({ userId: editUser.id, role: selectedRole })}
               disabled={updateRoleMutation.isPending || selectedRole === editUser?.role}
               data-testid="button-save-role"
             >
-              {updateRoleMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
+              {updateRoleMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              {t.common.save}
             </Button>
           </DialogFooter>
         </DialogContent>

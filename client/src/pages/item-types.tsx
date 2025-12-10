@@ -34,11 +34,12 @@ import {
 import { Plus, MoreHorizontal, Edit, Trash2, Package, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "@/lib/i18n";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { ItemType } from "@shared/schema";
 
 const formSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1, "الاسم مطلوب"),
   description: z.string().optional(),
 });
 
@@ -47,6 +48,7 @@ type FormData = z.infer<typeof formSchema>;
 export default function ItemTypesPage() {
   const { toast } = useToast();
   const { canEdit } = useAuth();
+  const { t } = useTranslation();
   const [editItemType, setEditItemType] = useState<ItemType | null>(null);
   const [deleteItemType, setDeleteItemType] = useState<ItemType | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -79,13 +81,13 @@ export default function ItemTypesPage() {
       return await apiRequest("POST", "/api/item-types", data);
     },
     onSuccess: () => {
-      toast({ title: editItemType ? "Item type updated" : "Item type created" });
+      toast({ title: editItemType ? "تم تحديث نوع العنصر" : "تم إنشاء نوع العنصر" });
       queryClient.invalidateQueries({ queryKey: ["/api/item-types"] });
       setIsDialogOpen(false);
       setEditItemType(null);
     },
     onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: t.common.error, description: error.message, variant: "destructive" });
     },
   });
 
@@ -94,21 +96,21 @@ export default function ItemTypesPage() {
       await apiRequest("DELETE", `/api/item-types/${id}`);
     },
     onSuccess: () => {
-      toast({ title: "Item type deleted" });
+      toast({ title: "تم حذف نوع العنصر" });
       queryClient.invalidateQueries({ queryKey: ["/api/item-types"] });
       setDeleteItemType(null);
     },
     onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: t.common.error, description: error.message, variant: "destructive" });
     },
   });
 
   const columns = [
-    { header: "Name", accessor: "name" as const },
-    { header: "Description", accessor: "description" as const },
+    { header: t.common.name, accessor: "name" as const },
+    { header: t.common.description, accessor: "description" as const },
     {
-      header: "Created",
-      accessor: (row: ItemType) => row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "-",
+      header: t.shipments.createdAt,
+      accessor: (row: ItemType) => row.createdAt ? new Date(row.createdAt).toLocaleDateString("ar-SA") : "-",
     },
     {
       header: "",
@@ -122,15 +124,15 @@ export default function ItemTypesPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => openDialog(row)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
+                <Edit className="h-4 w-4" />
+                {t.common.edit}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setDeleteItemType(row)}
                 className="text-destructive focus:text-destructive"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
+                <Trash2 className="h-4 w-4" />
+                {t.common.delete}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -139,76 +141,80 @@ export default function ItemTypesPage() {
     },
   ];
 
+  const renderDialog = () => (
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{editItemType ? t.itemTypes.editItemType : t.itemTypes.newItemType}</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit((data) => saveMutation.mutate(data))} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t.common.name}</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="مثال: إلكترونيات، أحذية" data-testid="input-item-type-name" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t.common.description} ({t.common.optional})</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} data-testid="input-item-type-description" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                {t.common.cancel}
+              </Button>
+              <Button type="submit" disabled={saveMutation.isPending} data-testid="button-save-item-type">
+                {saveMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                {editItemType ? t.common.save : t.common.create}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+
   if (!isLoading && (!itemTypes || itemTypes.length === 0)) {
     return (
-      <div className="space-y-8">
-        <PageHeader title="Item Types" description="Manage product categories" />
+      <div className="space-y-8 p-6">
+        <PageHeader title={t.itemTypes.title} description="إدارة فئات المنتجات" />
         <EmptyState
           icon={Package}
-          title="No item types yet"
-          description="Create item types to categorize your shipment items."
-          action={canEdit ? { label: "Add Item Type", onClick: () => openDialog() } : undefined}
+          title={t.itemTypes.noItemTypes}
+          description="أنشئ أنواع العناصر لتصنيف عناصر الشحنات الخاصة بك."
+          action={canEdit ? { label: t.itemTypes.addItemType, onClick: () => openDialog() } : undefined}
         />
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editItemType ? "Edit Item Type" : "Add Item Type"}</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit((data) => saveMutation.mutate(data))} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="e.g., Electronics, Shoes" data-testid="input-item-type-name" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} data-testid="input-item-type-description" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={saveMutation.isPending} data-testid="button-save-item-type">
-                    {saveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {editItemType ? "Save Changes" : "Create"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        {renderDialog()}
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <PageHeader
-        title="Item Types"
-        description="Manage product categories"
+        title={t.itemTypes.title}
+        description="إدارة فئات المنتجات"
         actions={
           canEdit && (
             <Button onClick={() => openDialog()} data-testid="button-add-item-type">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Item Type
+              <Plus className="h-4 w-4" />
+              {t.itemTypes.addItemType}
             </Button>
           )
         }
@@ -219,62 +225,17 @@ export default function ItemTypesPage() {
         data={itemTypes || []}
         isLoading={isLoading}
         rowKey={(row) => row.id}
-        emptyMessage="No item types found"
+        emptyMessage="لم يتم العثور على أنواع عناصر"
       />
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editItemType ? "Edit Item Type" : "Add Item Type"}</DialogTitle>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit((data) => saveMutation.mutate(data))} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="e.g., Electronics, Shoes" data-testid="input-item-type-name" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} data-testid="input-item-type-description" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={saveMutation.isPending} data-testid="button-save-item-type">
-                  {saveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {editItemType ? "Save Changes" : "Create"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      {renderDialog()}
 
       <ConfirmDialog
         open={!!deleteItemType}
         onOpenChange={(open) => !open && setDeleteItemType(null)}
-        title="Delete Item Type"
-        description={`Are you sure you want to delete "${deleteItemType?.name}"? This cannot be undone.`}
-        confirmLabel="Delete"
+        title={t.itemTypes.deleteItemType}
+        description={`هل أنت متأكد من حذف "${deleteItemType?.name}"؟ لا يمكن التراجع عن هذا الإجراء.`}
+        confirmLabel={t.common.delete}
         onConfirm={() => deleteItemType && deleteMutation.mutate(deleteItemType.id)}
         variant="destructive"
         isLoading={deleteMutation.isPending}

@@ -11,17 +11,17 @@ interface RoleBadgeProps {
 
 const roleConfig: Record<UserRole, { label: string; icon: typeof Shield; className: string }> = {
   ADMIN: {
-    label: "Admin",
+    label: "مسؤول",
     icon: Shield,
     className: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
   },
   OPERATOR: {
-    label: "Operator",
+    label: "مشغل",
     icon: Edit,
     className: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
   },
   VIEWER: {
-    label: "Viewer",
+    label: "مشاهد",
     icon: Eye,
     className: "bg-gray-100 text-gray-800 dark:bg-gray-800/30 dark:text-gray-400",
   },
